@@ -6,13 +6,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import GridSearchCV
-from sklearn.externals import joblib
+from sklearn.metrics import classification_report
+import joblib
 
 # Đường dẫn đến thư mục chứa các hình ảnh JPEG
-image_dir = 'D:/Master/HKII/Img Processing/MIAS_Mammography/all-mias/image/'
+image_dir = 'C:/Users/CFIX.VN/Documents/DeepLearning/Image Processing/all-mias/img/'
 
 # Đường dẫn đến tệp 'info.txt'
-info_file_path = 'D:/Master/HKII/Img Processing/MIAS_Mammography/all-mias/info.txt'
+info_file_path = 'C:/Users/CFIX.VN/Documents/DeepLearning/Image Processing/all-mias/info.txt'
 
 # Đọc dữ liệu từ tệp 'info.txt'
 with open(info_file_path, 'r') as file:
@@ -76,14 +77,18 @@ for info in info_list:
     x, y, radius = info['X Coordinate'], info['Y Coordinate'], info['Radius']
     cropped_image = image[y - radius:y + radius, x - radius:x + radius]
     
+    # Check if the cropped image is not empty and has the correct shape
+    if cropped_image.size == 0 or cropped_image.shape[0] < 32 or cropped_image.shape[1] < 32:
+        # Skip this sample if the cropped image is too small
+        continue
     # Calculate HOG features for the cropped image
-    hog_feature = feature.hog(cropped_image, pixels_per_cell=(16, 16), cells_per_block=(1, 1))
+    hog_feature = feature.hog(cropped_image, pixels_per_cell=(32, 32), cells_per_block=(2, 2))
     
     # Append the HOG features to the list
     hog_features.append(hog_feature)
     
     # Append the label (severity) to the labels list
-    labels.append(info['Severity'])
+    labels.append(1 if info['Severity'] == 'M' else 0)  # 1 for Malignant, 0 for Benign
     
 # Calculate the maximum length of HOG features
 max_feature_length = max(len(feature) for feature in hog_features)
@@ -136,3 +141,16 @@ print(f'Model saved to {model_filename}')
 y_pred = best_svm_model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 print(f'Accuracy of the model: {accuracy * 100:.2f}%')
+
+print("Kích thước hog_features:", len(hog_features))
+print("Kích thước hog_features:", hog_features.shape)
+print("Kích thước của mỗi mẫu hog_feature:", hog_features[0].shape)  # Đổi index nếu cần thiết
+print("Số lượng mẫu trong tập huấn luyện:", len(X_train))
+print("Số lượng nhãn trong tập huấn luyện:", len(y_train))
+print("Số lượng mẫu trong tập kiểm thử:", len(X_test))
+print("Số lượng nhãn trong tập kiểm thử:", len(y_test))
+print("Các tham số tinh chỉnh tốt nhất:", best_params)
+
+# Additional metrics for binary classification
+print('\nClassification Report:')
+print(classification_report(y_test, y_pred))
